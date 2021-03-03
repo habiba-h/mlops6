@@ -32,16 +32,17 @@ from sklearn.model_selection import train_test_split
 import lightgbm
 
 # Split the dataframe into test and train data
-def split_data(df):
-    X = df.drop('Y', axis=1).values
-    y = df['Y'].values
+def split_data(data_df):
+    """Split a dataframe into training and validation datasets"""
+    features = data_df.drop(['target', 'id'], axis = 1)
+    labels = np.array(data_df['target'])
+    features_train, features_valid, labels_train, labels_valid = train_test_split(features, labels, test_size=0.2, random_state=0)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=0)
-    data = {"train": {"X": X_train, "y": y_train},
-            "test": {"X": X_test, "y": y_test}}
-    return data
-
+    train_data = lightgbm.Dataset(features_train, label=labels_train)
+    valid_data = lightgbm.Dataset(features_valid, label=labels_valid, free_raw_data=False)
+    
+    
+    return (train_data, valid_data)
 
 # Train the model, return the model
 def train_model(data, ridge_args):
