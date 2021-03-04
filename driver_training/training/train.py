@@ -45,41 +45,59 @@ def split_data(data_df):
     return (train_data, valid_data)
 
 # Train the model, return the model
-def train_model(data, ridge_args):
-    reg_model = Ridge(**ridge_args)
-    reg_model.fit(data["train"]["X"], data["train"]["y"])
-    return reg_model
-
+def train_model(data, parameters):
+    """Train a model with the given datasets and parameters"""
+    # The object returned by split_data is a tuple.
+    # Access train_data with data[0] and valid_data with data[1]
+    
+    train_dt = data[0]
+    valid_dt = data[1]
+    model = lightgbm.train(parameters,
+                               train_dt,
+                               valid_sets=valid_dt,
+                               num_boost_round=500,
+                               early_stopping_rounds=20)
+    return model
 
 # Evaluate the metrics for the model
 def get_model_metrics(model, data):
-    preds = model.predict(data["test"]["X"])
-    mse = mean_squared_error(preds, data["test"]["y"])
-    metrics = {"mse": mse}
-    return metrics
+    """Construct a dictionary of metrics for the model"""
 
+    valid_dt = data[1]
+    predictions = model.predict(valid_dt.data)
+    fpr, tpr, thresholds = metrics.roc_curve(valid_dt.label, predictions)
+    model_metrics = {"auc": (metrics.auc(fpr, tpr))}    
+    return model_metrics
 
 def main():
-    print("Running train.py")
+    """This method invokes the training functions for development purposes"""
+    
+    # Read data from a file
+    data_df = pd.read_csv('porto_seguro_safe_driver_prediction_input.csv')
 
-    # Define training parameters
-    ridge_args = {"alpha": 0.5}
+    # Hard code the parameters for training the model
+    parameters = {
+        'learning_rate': 0.02,
+        'boosting_type': 'gbdt',
+        'objective': 'binary',
+        'metric': 'auc',
+        'sub_feature': 0.7,
+        'num_leaves': 60,
+        'min_data': 100,
+        'min_hessian': 1,
+        'verbose': 2
+    }
 
-    # Load the training data as dataframe
-    data_dir = "data"
-    data_file = os.path.join(data_dir, 'diabetes.csv')
-    train_df = pd.read_csv(data_file)
-
-    data = split_data(train_df)
-
-    # Train the model
-    model = train_model(data, ridge_args)
-
-    # Log the metrics for the model
-    metrics = get_model_metrics(model, data)
-    for (k, v) in metrics.items():
-        print(f"{k}: {v}")
-
+    # Call the functions defined in this file    
+    data = split_data(data_df)
+    #train_dt = data[0]
+    #valid_dt = data[1]
+    model = train_model(data, parameters)
+    model_metrics = get_model_metrics(model, data)
+    
+    
+    # Print the resulting metrics for the model
+    print(model_metrics)
 
 if __name__ == '__main__':
     main()
