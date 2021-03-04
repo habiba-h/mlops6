@@ -37,3 +37,7 @@ dependencies:
 
       # MLOps with R
       - azure-storage-blob
+
+      # driver usecase dependencies
+      - lightgbm
+      - azureml-dataprep
